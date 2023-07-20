@@ -8,6 +8,7 @@
 #include "deps/buffer/buffer.c"
 #include "deps/fs/fs.c"
 #include "deps/tiny-regex-c/re.c"
+#include "deps/cwalk/cwalk.c"
 
 /**
  * @brief Generates a webpage and returns a buffer_t
@@ -16,18 +17,28 @@
  */
 buffer_t* bk_generate_webpage(char* webpageFilePath)
 {
-    buffer_t *pageName;
-    int page_match_length;
-    int page_match_idx = re_match("[A-z0-9]+\\.[A-z0-9]+\\.[A-z0-9]+", webpageFilePath, &page_match_length);
-    if (page_match_idx != -1)
-    {
-        //Store the location of the match start as the start of the pointer for our new string. 
-        //And set the stop to the match_length
-        pageName = buffer_new_with_string_length(&page_match_idx[webpageFilePath], page_match_length);
-    }
-
-    // Create a buffer_t to store the generate html.
+    // Create a buffer_t to store the generated html.
     buffer_t* htmlPage;
+    
+    // Get the base filename without the path. 
+    char* basename;
+    size_t basenameLength;
+    cwk_path_get_basename(webpageFilePath, &basename, &basenameLength);
+
+    //Get the dirname
+    size_t dirNameLength;
+    char* dirpath = (char*)malloc(strlen(webpageFilePath) * sizeof(char));
+    strncpy(dirpath, webpageFilePath, strlen(webpageFilePath)); // Copy the path in to a string
+    cwk_path_get_dirname(dirpath, &dirNameLength);// Get the length of the dirname
+    buffer_t* dirnameBuff = buffer_new_with_string(dirpath);//Create a buffer_t of that path
+    dirnameBuff = buffer_slice(dirnameBuff, 0, dirNameLength);//Slice down to dirname
+    char* dirname = (char*)malloc(strlen(dirnameBuff->data) * sizeof(char));
+    strncpy(dirname, dirnameBuff->data, strlen(dirnameBuff->data));
+    buffer_free(dirnameBuff);
+
+    // Get the current working directory.
+    char* cwd = (char*)malloc(FS_PATH_MAX*sizeof(char));
+    getcwd(cwd, FS_PATH_MAX);
 
     //Load the pagefile into a buffer.
     char* pageFile = fs_read(webpageFilePath);
@@ -35,22 +46,35 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
     //If the buffer is not null. 
     if(pageFile)
     {
-        //Get the layout name.
-        buffer_t* layoutName;
-        int match_length;
-        int match_idx = re_match("[A-z0-9\-_\.]+;", pageFile, &match_length);
-        if (match_idx != -1)
+        buffer_t* layoutPath;
+
+        //Check for layout Tag
+        int layoutTagMatchLength;
+        int layoutTagMatchStartIndex = re_match("@layout [^\\0]+;", pageFile, &layoutTagMatchLength);
+
+        //If a layout tag is found
+        if (layoutTagMatchStartIndex != -1)
         {
-            //Store the location of the match start as the start of the pointer for our new string. 
-            //And set the stop to the match_length
-            layoutName = buffer_new_with_string_length(&match_idx[pageFile], match_length);
-            layoutName->data[layoutName->len-1] = '\0';//Strip the ; and add a null terminator.
+            //Create a buffer for the layout tag
+            char* layoutTag = (char*)malloc(layoutTagMatchLength * sizeof(char));
+            strncpy(layoutTag, pageFile+layoutTagMatchStartIndex, layoutTagMatchLength);
+            layoutTag[layoutTagMatchLength] = '\0';
+
+            //Get the raw path from the tag
+            char* rawLayoutPath = (char*)malloc((strlen(layoutTag) - strlen("@layout ")) * sizeof(char));
+            strncpy(rawLayoutPath, layoutTag+strlen("@layout "), strlen(layoutTag) - strlen("@layout "));
+            rawLayoutPath[strlen(rawLayoutPath)-1] = '\0';
+
+            //Create buffer_t for the path and prepend our dirname
+            layoutPath = buffer_new();
+            buffer_append(layoutPath, dirname);
+            buffer_append(layoutPath, rawLayoutPath);
+
+            //Load the layout.
+            htmlPage = bk_load_layout(layoutPath->data);
+
         }
-        //Load the layout.
-        printf("FILE: %s\n", layoutName);
-        buffer_t *layoutPath = buffer_new_with_string("./");
-        buffer_t *layoutFile = bk_load_layout(layoutPath->data);
-        printf("LAYOUT: *%s*\n", layoutFile->data);
+
     }
     else//If it is null.
     {

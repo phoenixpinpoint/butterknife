@@ -10,6 +10,10 @@
 #include "deps/buffer/buffer.h"
 #include "deps/fs/fs.h"
 
+#ifndef FS_PATH_MAX
+#define FS_PATH_MAX 1024
+#endif
+
 /**
  * @brief Generates a webpage and returns a buffer_t
  * 
