@@ -7,7 +7,7 @@
     "license": "MIT",
     "src": [
       "butterknife.c",
-      "butterknife.c"
+      "butterknife.h"
     ],
     "dependencies": {
         "clibs/buffer": "*",
