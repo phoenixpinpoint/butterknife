@@ -14,6 +14,10 @@
 #define FS_PATH_MAX 1024
 #endif
 
+#ifndef MAX_CONTENT_TAGS
+#define MAX_CONTENT_TAGS 1000
+#endif
+
 /**
  * @brief Generates a webpage and returns a buffer_t
  * 
@@ -29,5 +33,17 @@ buffer_t* bk_generate_webpage(char* webpageFilePath);
  * @return buffer_t* 
  */
 buffer_t* bk_load_layout(char* layoutFilePath);
+
+/**
+ * @brief splits a string from 0 to leftSlice, and rightSlice and the strlen. Inserting
+ * the source buffer_t into the destination buffer_t.
+ * 
+ * @param destination
+ * @param source
+ * @param leftSlice
+ * @param rightSlice
+ * @return buffer_t*
+*/
+buffer_t* bk_buffer_t_insert(buffer_t* destination, buffer_t* source, int leftSlice, int rightSlice);
 
 #endif
