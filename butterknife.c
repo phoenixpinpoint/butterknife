@@ -183,7 +183,7 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 {
                     break;
                 }
-                
+
                 #ifdef BK_DEBUG
                     printf("Found Tag: %s\n", tag->data);
                 #endif
@@ -215,7 +215,7 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 loopCount++;
             }
         }
-        //buffer_free(pageBuffer);
+        buffer_free(pageBuffer);
     }
     else//If it is null.
     {
