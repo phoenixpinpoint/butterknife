@@ -23,6 +23,12 @@
  */
 buffer_t* bk_generate_webpage(char* webpageFilePath)
 {
+    #ifdef BK_DEBUG
+        printf("Webpage Path: %s\n", webpageFilePath);
+    #endif
+
+    //return (buffer_t*)0;
+    
     // Create a buffer_t to store the generated html.
     buffer_t* htmlPage;
     
@@ -31,17 +37,28 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
     size_t basenameLength;
     cwk_path_get_basename(webpageFilePath, &basename, &basenameLength);
 
+    #ifdef BK_DEBUG
+        printf("basename: %s\n", basename);
+    #endif
+
     //Get the dirname
     size_t dirNameLength;
     buffer_t* dirpath = buffer_new();
     buffer_append(dirpath, webpageFilePath);
     cwk_path_get_dirname(dirpath->data, &dirNameLength);// Get the length of the dirname
     dirpath = buffer_slice(dirpath, 0, dirNameLength);
-    
+
+    #ifdef BK_DEBUG
+        printf("dirpath: %s\n", dirpath->data);
+    #endif
 
     // Get the current working directory.
     char* cwd = (char*)malloc(FS_PATH_MAX*sizeof(char));
     getcwd(cwd, FS_PATH_MAX);
+
+    #ifdef BK_DEBUG
+        printf("cwd: %s\n", cwd);
+    #endif
 
     //Load the pagefile into a buffer.
     char* pageFile = fs_read(webpageFilePath);
@@ -73,6 +90,10 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
             buffer_append(layoutPath, dirpath->data);
             buffer_append(layoutPath, rawLayoutPath->data);
 
+            #ifdef BK_DEBUG
+                printf("Layout Path: %s\n",layoutPath->data);
+            #endif
+
             //Load the layout and free the buffer.
             htmlPage = bk_load_layout(layoutPath->data);
             buffer_free(layoutPath);
@@ -96,6 +117,9 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
             //If the layout already has a <head> tag
             if (indexOfHeadTag != -1 && indexOfCloseHeadTag != -1)
             {
+                #ifdef BK_DEBUG
+                    printf("Page and Template have <head>/@head tag\n");
+                #endif
                 //Load the existing page data.
                 size_t lengthOfHeadTag = strlen("<head>"); 
                 size_t lengthOfCloseHeadTag = strlen("</head>"); 
@@ -115,6 +139,9 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 buffer_free(additionalHeaderValue);
             }
             else {//If not we need to create one. 
+                #ifdef BK_DEBUG
+                    printf("Only Page has @head tag\n");
+                #endif
                 //Locate the <html> and append a new <head> tag to it.
                 size_t indexOfHTMLTag = buffer_indexof(htmlPage, "<html>");
                 size_t lengthOfHTMLTag = strlen("<html>");
@@ -135,6 +162,9 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 buffer_free(headerValue);
             }
 
+            #ifdef BK_DEBUG
+                printf("Getting Page Sections.\n");
+            #endif
             //Handle page sections.
             //Find each section tag in the template, rendering them and updating the html page.
             int loopCount = 0; 
@@ -148,18 +178,24 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 vec_void_t getTag = bk_get_next_tag(htmlPage, "@yields [^\\0;]+;");
                 buffer_t* tag = (buffer_t*)getTag.data[0];
                 
-                //If the response tag is empty, break the loop.
-                if(tag->data == NULL)
+                //If the response tag is null empty, break the loop.
+                if(tag->data == NULL || strlen(tag->data) == 1)
                 {
                     break;
                 }
+                
+                #ifdef BK_DEBUG
+                    printf("Found Tag: %s\n", tag->data);
+                #endif
 
                 //Get the tag
                 size_t lenOfYieldTag = strlen("@yields ");
                 tag = buffer_slice(tag, lenOfYieldTag, strlen(tag->data));
                 tag = buffer_slice(tag, 0, strlen(tag->data)-1);
 
-                //printf("Searching for TAG: %s\n", tag->data);
+                #ifdef BK_DEBUG
+                    printf("Cleaned Tag to: %s\n", tag->data);
+                #endif
 
                 //If we cannot get the section break the loop.
                 pageData = bk_get_section_data(pageData,tag);

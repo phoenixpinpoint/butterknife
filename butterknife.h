@@ -19,6 +19,8 @@
 #define MAX_CONTENT_TAGS 1000
 #endif
 
+// #define BK_DEBUG //Un-comment for debugging.
+
 /**
  * @brief Generates a webpage and returns a buffer_t
  * 
