@@ -2,6 +2,6 @@
 
 int main()
 {
-    bk_generate_webpage("./example/page.bk.html");
-    bk_generate_webpage("./example/page1.bk.html");
+    buffer_t* page = bk_generate_webpage("./example/page.bk.html");
+    printf("Page: \n%s\n", page->data);
 }

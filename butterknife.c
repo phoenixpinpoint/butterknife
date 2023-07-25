@@ -9,6 +9,7 @@
 #include "deps/fs/fs.c"
 #include "deps/tiny-regex-c/re.c"
 #include "deps/cwalk/cwalk.c"
+#include "deps/vec/vec.c"
 
 /**
  * @brief Generates a webpage and returns a buffer_t
@@ -135,61 +136,47 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
             }
 
             //Handle page sections.
-            //Find each section tag in the template.
-            int firstTagLength;
-            int firstTagStartIndex = re_match("@yields [^\\0;]+;", htmlPage->data, &firstTagLength);
-            if (firstTagStartIndex != -1)//If there is any @yields tags
-            {
+            //Find each section tag in the template, rendering them and updating the html page.
+            int loopCount = 0; 
+            while(loopCount < MAX_CONTENT_TAGS)
+            {                
                 //get the original page.
-                buffer_t* tagData = buffer_new();
-                buffer_append(tagData, pageFile);
+                buffer_t* pageData = buffer_new();
+                buffer_append(pageData, pageFile);
+
+                //Get the tag from the page
+                vec_void_t getTag = bk_get_next_tag(htmlPage, "@yields [^\\0;]+;");
+                buffer_t* tag = (buffer_t*)getTag.data[0];
+                
+                //If the response tag is empty, break the loop.
+                if(tag->data == NULL)
+                {
+                    break;
+                }
 
                 //Get the tag
-                buffer_t* tagToFind = buffer_slice(htmlPage, firstTagStartIndex, firstTagStartIndex+firstTagLength);
                 size_t lenOfYieldTag = strlen("@yields ");
-                tagToFind = buffer_slice(tagToFind, lenOfYieldTag, strlen(tagToFind->data));
-                tagToFind = buffer_slice(tagToFind, 0, strlen(tagToFind->data)-1);
+                tag = buffer_slice(tag, lenOfYieldTag, strlen(tag->data));
+                tag = buffer_slice(tag, 0, strlen(tag->data)-1);
 
-                //Build the tag specs
-                buffer_t* openSectionTag = buffer_new();
-                buffer_append(openSectionTag, "@section ");
-                buffer_append(openSectionTag, tagToFind->data);
+                //printf("Searching for TAG: %s\n", tag->data);
 
-                buffer_t* closeSectionTag = buffer_new();
-                buffer_append(closeSectionTag, "@sectionclose");
+                //If we cannot get the section break the loop.
+                pageData = bk_get_section_data(pageData,tag);
+                if(pageData->data == NULL)
+                {
+                    break;
+                }
 
-                //Get the value of the tag.
-                int lengthOfTagStart;
-                int indexOfTagStart = re_match(openSectionTag->data, tagData->data, &lengthOfTagStart);
-                int lengthOfTagEnd;
-                int indexOfTagEnd = re_match(closeSectionTag->data, tagData->data, &lengthOfTagEnd);
-                tagData = buffer_slice(tagData, indexOfTagStart+lengthOfTagStart, indexOfTagEnd);
-                
-                //Insert the tag value.
-                htmlPage = bk_buffer_t_insert(htmlPage, tagData, firstTagStartIndex, firstTagStartIndex+firstTagLength);
-                
-                // Split the rendered page.
-                //buffer_t* leftHalfOfPage = buffer_slice(htmlPage, 0, firstTagStartIndex);
-                //buffer_t* rightHalfOfPage = buffer_slice(htmlPage, firstTagStartIndex+firstTagLength, strlen(htmlPage->data));
+                //printf("Inserting Data *%s*\n at %d to %d\n", pageData->data, getTag.data[2], (int)getTag.data[2]+(int)getTag.data[3]);
 
+                //Update the html page.
+                htmlPage = bk_buffer_t_insert(htmlPage, pageData, getTag.data[1], (int)getTag.data[1]+(int)getTag.data[2]);
 
-
-
-
-
-                // //Reset the HTML Page
-                // buffer_free(htmlPage);
-
-                // //Rebuild the HTML Page
-                // htmlPage = buffer_new();
-                // buffer_append(htmlPage, leftHalfOfPage->data);
-                // buffer_append(htmlPage, tagData->data);
-                // buffer_append(htmlPage, rightHalfOfPage->data);
-
-                // for(int iterator = 0; iterator < MAX_CONTENT_TAGS; iterator++)
-                // {
-                    
-                // }              
+                //Clean-up
+                vec_deinit(&getTag);
+                buffer_free(pageData);
+                loopCount++;
             }
         }
         //buffer_free(pageBuffer);
@@ -267,3 +254,82 @@ buffer_t* bk_buffer_t_insert(buffer_t* destination, buffer_t* source, int leftSl
     //Return the newly created buffer.
     return destination;
 }
+
+/**
+ * Takes in a buffer and a tagPattern, find first tag, trims it from the buffer and returns
+ * the trimmed buffer. Returns the tag and trims the buffer. 
+*/
+vec_void_t bk_get_next_tag(buffer_t* buffer, char* tagPattern)
+{
+    vec_void_t results;
+    buffer_t* tag;
+
+    //Gets the match
+    int tagLength;
+    int tagStartIndex = re_match(tagPattern, buffer->data, &tagLength);
+    
+    //If a match is not found, return nullptr to tag
+    if(tagStartIndex == -1 || tagLength == -1)
+    {
+        return results;
+    }
+
+    //Extract the tag, trim the buffer and, return
+    tag = buffer_slice(buffer, tagStartIndex, tagStartIndex+tagLength);
+
+    vec_init(&results);
+    vec_push(&results, tag);
+    vec_push(&results, tagStartIndex);
+    vec_push(&results, tagLength);
+
+    //printf("TAG SI: %d & Len: %d\n", results.data[2], results.data[3]);
+
+    return results;
+}
+
+/**
+ * takes a page buffer, tag and returns the section data
+*/
+buffer_t* bk_get_section_data(buffer_t* page, buffer_t* tag)
+{
+    //Build the tag specs
+    buffer_t* openSectionTag = buffer_new();
+    buffer_append(openSectionTag, "@section ");
+    buffer_append(openSectionTag, tag->data);
+    buffer_t* closeSectionTag = buffer_new();
+    buffer_append(closeSectionTag, "@sectionclose");
+
+    //Pull from @section..... to the last @sectionclose
+    buffer_t* tagBlock = buffer_new();
+    buffer_append(tagBlock, openSectionTag->data);
+    buffer_append(tagBlock, "[ ]*\\\n[^]+");
+    int lengthOfBlock;
+    int indexOfBlockStart = re_match(tagBlock->data, page->data, &lengthOfBlock);
+    //printf("%d:%d:%d\n",indexOfBlockStart, lengthOfBlock, indexOfBlockStart+lengthOfBlock);
+    if(indexOfBlockStart == -1 || lengthOfBlock == -1)
+    {
+        return (buffer_t*)0;
+    }
+    buffer_t* tagBlockValue = buffer_slice(page, indexOfBlockStart, indexOfBlockStart+lengthOfBlock);
+
+    //Locate the first @section close after our @section......
+    int lengthOfCloseSectionTag;
+    int indexOfCloseSectionTag = re_match(closeSectionTag->data, tagBlockValue->data, &lengthOfCloseSectionTag);
+    if(indexOfCloseSectionTag == -1 || lengthOfCloseSectionTag == -1)
+    {
+        return (buffer_t*)0;
+    }
+
+    //Remove everything frome the first @sectionclose to the last EOF
+    tagBlockValue = buffer_slice(tagBlockValue, 0, indexOfCloseSectionTag);
+    //Remove @section....... tag
+    tagBlockValue = buffer_slice(tagBlockValue, strlen(openSectionTag->data), strlen(tagBlockValue->data));
+    //printf("TBV: *%s*\n", tagBlockValue->data);
+
+    //Clean up.
+    buffer_free(openSectionTag);
+    buffer_free(closeSectionTag);
+    buffer_free(tagBlock);
+
+    return tagBlockValue;
+} 

@@ -9,6 +9,7 @@
 #include "deps/tiny-regex-c/re.h"
 #include "deps/buffer/buffer.h"
 #include "deps/fs/fs.h"
+#include "deps/vec/vec.h"
 
 #ifndef FS_PATH_MAX
 #define FS_PATH_MAX 1024
@@ -45,5 +46,17 @@ buffer_t* bk_load_layout(char* layoutFilePath);
  * @return buffer_t*
 */
 buffer_t* bk_buffer_t_insert(buffer_t* destination, buffer_t* source, int leftSlice, int rightSlice);
+
+/**
+ * Takes in a buffer and a tagPattern, find first tag, trims it from the buffer and returns
+ * the trimmed buffer. 
+*/
+vec_void_t bk_get_next_tag(buffer_t* buffer, char* tagPattern);
+
+
+/**
+ * takes a page buffer, tag and returns the section data
+*/
+buffer_t* bk_get_section_data(buffer_t* page, buffer_t* tag);
 
 #endif

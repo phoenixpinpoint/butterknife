@@ -13,6 +13,7 @@
         "clibs/buffer": "*",
         "jwerle/fs.c": "*",
         "kokke/tiny-regex-c": "*",
-        "likle/cwalk": "*"
+        "likle/cwalk": "*",
+        "rxi/vec": "*"
     }
   }
