@@ -11,6 +11,8 @@
 #include "deps/fs/fs.h"
 #include "deps/vec/vec.h"
 
+#include <unistd.h>
+
 #ifndef FS_PATH_MAX
 #define FS_PATH_MAX 1024
 #endif
