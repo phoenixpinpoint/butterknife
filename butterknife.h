@@ -6,12 +6,11 @@
 #ifndef BUTTERKNIFE_H
 #define BUTTERKNIFE_H
 
-#include "deps/tiny-regex-c/re.h"
-#include "deps/buffer/buffer.h"
-#include "deps/fs/fs.h"
-#include "deps/vec/vec.h"
-
 #include <unistd.h>
+#include <re.h>
+#include <buffer.h>
+#include <fs.h>
+#include <vec.h>
 
 #ifndef FS_PATH_MAX
 #define FS_PATH_MAX 1024
