@@ -238,7 +238,7 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 //printf("Inserting Data *%s*\n at %d to %d\n", pageData->data, getTag.data[2], (int)getTag.data[2]+(int)getTag.data[3]);
 
                 //Update the html page.
-                htmlPage = bk_buffer_t_insert(htmlPage, pageData, getTag.data[1], (int)getTag.data[1]+(int)getTag.data[2]);
+                htmlPage = bk_buffer_t_insert(htmlPage, pageData, (int)getTag.data[1], (int)getTag.data[1]+(int)getTag.data[2]);
 
                 //Clean-up
                 vec_deinit(&getTag);
@@ -346,8 +346,8 @@ vec_void_t bk_get_next_tag(buffer_t* buffer, char* tagPattern)
 
     vec_init(&results);
     vec_push(&results, tag);
-    vec_push(&results, tagStartIndex);
-    vec_push(&results, tagLength);
+    vec_push(&results, (void*)tagStartIndex);
+    vec_push(&results, (void*)tagLength);
 
     //printf("TAG SI: %d & Len: %d\n", results.data[2], results.data[3]);
 
