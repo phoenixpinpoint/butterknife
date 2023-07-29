@@ -11,6 +11,7 @@
 #include <buffer.h>
 #include <fs.h>
 #include <vec.h>
+#include <cwalk.h>
 
 #ifndef FS_PATH_MAX
 #define FS_PATH_MAX 1024
