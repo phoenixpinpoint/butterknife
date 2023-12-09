@@ -5,11 +5,14 @@
  */
 #include "butterknife.h"
 
-#include "deps/buffer/buffer.c"
-#include "deps/fs/fs.c"
-#include "deps/tiny-regex-c/re.c"
-#include "deps/cwalk/cwalk.c"
-#include "deps/vec/vec.c"
+//If butterknife is not being added as a dependency, include all requisite C files.
+#ifndef BK_DEPENDENCY
+    #include "deps/buffer/buffer.c"
+    #include "deps/fs/fs.c"
+    #include "deps/tiny-regex-c/re.c"
+    #include "deps/cwalk/cwalk.c"
+    #include "deps/vec/vec.c"
+#endif
 
 /**
  * @brief Generates a webpage and returns a buffer_t

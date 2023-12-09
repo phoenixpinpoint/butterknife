@@ -7,10 +7,10 @@
 #define BUTTERKNIFE_H
 
 #include <unistd.h>
-#include <re.h>
-#include <buffer.h>
-#include <fs.h>
-#include <vec.h>
+#include <tiny-regex-c/re.h>
+#include <buffer/buffer.h>
+#include <fs/fs.h>
+#include <vec/vec.h>
 #include <cwalk.h>
 
 #ifndef FS_PATH_MAX
