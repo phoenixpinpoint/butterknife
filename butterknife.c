@@ -5,12 +5,6 @@
  */
 #include "butterknife.h"
 
-#include "deps/buffer/buffer.c"
-#include "deps/fs/fs.c"
-#include "deps/tiny-regex-c/re.c"
-#include "deps/cwalk/cwalk.c"
-#include "deps/vec/vec.c"
-
 /**
  * @brief Generates a webpage and returns a buffer_t
  * 
