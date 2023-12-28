@@ -62,6 +62,8 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
     {
         buffer_t* layoutPath;
 
+        int layoutLoadedFlag = 0;
+
         //Check for layout Tag
         int layoutTagMatchLength;
         int layoutTagMatchStartIndex = re_match("@layout [^\\0]+;", pageFile, &layoutTagMatchLength);
@@ -93,15 +95,29 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
             buffer_free(layoutPath);
             buffer_free(layoutTag);
             buffer_free(rawLayoutPath);
+            layoutLoadedFlag = 1;
+        }
+
+        if(layoutLoadedFlag == 0)
+        {
+            #ifdef BK_DEBUG
+                printf("Layout loaded flag: 0\n");
+                printf("Defaulting to loading the raw page.\n");
+            #endif
+            htmlPage = buffer_new();
+            buffer_append(htmlPage, pageFile);
+            return htmlPage;
         }
         
         //Load the additional header data into the head tag.
         buffer_t* pageBuffer = buffer_new();
         buffer_append(pageBuffer, pageFile);
         
-        //Check if layout has <head> and @head tags
+        //Check if layout has <head> tags
         size_t indexOfHeadTag = buffer_indexof(htmlPage,"<head>");
         size_t indexOfCloseHeadTag = buffer_indexof(htmlPage,"</head>");
+
+        //Check the page for @head tags
         size_t indexOfBKHeadTag = buffer_indexof(pageBuffer,"@head");
         size_t indexOfBKCloseHeadTag = buffer_indexof(pageBuffer,"@headclose");
 
@@ -136,9 +152,24 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 #ifdef BK_DEBUG
                     printf("Only Page has @head tag\n");
                 #endif
-                //Locate the <html> and append a new <head> tag to it.
+
+                //Locate the <html> and add if missing
                 size_t indexOfHTMLTag = buffer_indexof(htmlPage, "<html>");
                 size_t lengthOfHTMLTag = strlen("<html>");
+                if(indexOfHTMLTag == -1)
+                {
+                    buffer_prepend(htmlPage, "<html>");
+                }
+                indexOfHTMLTag = buffer_indexof(htmlPage, "<html>");
+
+                //Locate the </html> and add if missing.
+                size_t indexOfCloseHTMLTag = buffer_indexof(htmlPage, "</html>");
+                size_t lengthOfCloseHTMLTag = strlen("</html>");
+                if(indexOfCloseHTMLTag == -1);
+                {
+                    buffer_append(htmlPage, "</html>");
+                }
+                lengthOfCloseHTMLTag = strlen("</html>");
 
                 size_t lengthOfBKHeadTag = strlen("@head"); 
                 size_t lengthOfBKCloseHeadTag = strlen("@headclose");
@@ -148,9 +179,8 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 buffer_append(headerTag, "<head>");
                 buffer_append(headerTag, headerValue->data);
                 buffer_append(headerTag, "</head>");
-
-                //printf("Free ERROR: %s\n", htmlPage->data);
-                htmlPage = bk_buffer_t_insert(htmlPage, headerTag, indexOfHTMLTag, indexOfHTMLTag+lengthOfHTMLTag);
+                
+                htmlPage = bk_buffer_t_insert(htmlPage, headerTag, indexOfHTMLTag+lengthOfHTMLTag, indexOfHTMLTag+lengthOfHTMLTag);
 
                 buffer_free(headerTag);
                 buffer_free(headerValue);
@@ -159,6 +189,7 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
             #ifdef BK_DEBUG
                 printf("Getting Page Sections.\n");
             #endif
+
             //Handle page sections.
             //Find each section tag in the template, rendering them and updating the html page.
             int loopCount = 0; 
@@ -201,7 +232,7 @@ buffer_t* bk_generate_webpage(char* webpageFilePath)
                 //printf("Inserting Data *%s*\n at %d to %d\n", pageData->data, getTag.data[2], (int)getTag.data[2]+(int)getTag.data[3]);
 
                 //Update the html page.
-                htmlPage = bk_buffer_t_insert(htmlPage, pageData, getTag.data[1], (int)getTag.data[1]+(int)getTag.data[2]);
+                htmlPage = bk_buffer_t_insert(htmlPage, pageData, (int)getTag.data[1], (int)getTag.data[1]+(int)getTag.data[2]);
 
                 //Clean-up
                 vec_deinit(&getTag);
@@ -309,8 +340,8 @@ vec_void_t bk_get_next_tag(buffer_t* buffer, char* tagPattern)
 
     vec_init(&results);
     vec_push(&results, tag);
-    vec_push(&results, tagStartIndex);
-    vec_push(&results, tagLength);
+    vec_push(&results, (void*)tagStartIndex);
+    vec_push(&results, (void*)tagLength);
 
     //printf("TAG SI: %d & Len: %d\n", results.data[2], results.data[3]);
 

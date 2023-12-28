@@ -17,6 +17,19 @@ Install with CLib or copy butterknife.c and butterknife.h and the deps folder in
 clib install
 ```
 
+If you are including any of the above libraries elsewhere add this compiler flag
+```bash
+-D BK_DEPENDENCY
+```
+
+As well add the following to your root C file (this assumes you are using include flags:`-Ideps -Ideps/cwalk`):
+```c
+#include <fs/fs.c>
+#include <tiny-regex-c/re.c>
+#include <cwalk/cwalk.c>
+#include <vec/vec.c>
+```
+
 
 After which you can create a basic layout:
 ```html
